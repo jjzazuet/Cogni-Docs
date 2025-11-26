@@ -165,40 +165,50 @@ export class ChromaStorage implements StorageService {
           ids: batch.map((doc) => doc.id),
           embeddings: batch.map((doc) => doc.embedding),
           documents: batch.map((doc) => doc.content),
-          metadatas: batch.map((doc) => ({
-            ...doc.metadata,
-            // Ensure all metadata values are compatible with ChromaDB
-            source_file: doc.metadata.source_file || "",
-            document_type: doc.metadata.document_type || "unknown",
-            category: doc.metadata.category || "",
-            keywords: Array.isArray(doc.metadata.keywords)
-              ? doc.metadata.keywords.join(",")
-              : String(doc.metadata.keywords || ""),
-            chunk_index: Number(doc.metadata.chunk_index) || 0,
-            page_number: doc.metadata.page_number ? Number(doc.metadata.page_number) : undefined,
+          metadatas: batch.map((doc) => {
+            // Build metadata object, filtering out undefined values
+            const metadata: Record<string, string | number> = {
+              // Required fields with defaults
+              source_file: doc.metadata.source_file || "",
+              document_type: doc.metadata.document_type || "unknown",
+              category: doc.metadata.category || "",
+              keywords: Array.isArray(doc.metadata.keywords)
+                ? doc.metadata.keywords.join(",")
+                : String(doc.metadata.keywords || ""),
+              chunk_index: Number(doc.metadata.chunk_index) || 0,
+            };
+
+            // Only add optional fields if they have values (ChromaDB doesn't accept undefined)
+            if (doc.metadata.document_id) metadata.document_id = doc.metadata.document_id;
+            if (doc.metadata.mime_type) metadata.mime_type = doc.metadata.mime_type;
+            if (typeof doc.metadata.size_bytes === "number") metadata.size_bytes = doc.metadata.size_bytes;
+            if (doc.metadata.created_at) metadata.created_at = doc.metadata.created_at;
+            if (typeof doc.metadata.page_number === "number") metadata.page_number = doc.metadata.page_number;
+            
             // Agentic annotation fields (store arrays as CSV strings)
-            section_heading: doc.metadata.section_heading || undefined,
-            topic_tags: Array.isArray(doc.metadata.topic_tags)
-              ? doc.metadata.topic_tags.join(",")
-              : doc.metadata.topic_tags
-                ? String(doc.metadata.topic_tags)
-                : undefined,
-            code_languages: Array.isArray(doc.metadata.code_languages)
-              ? doc.metadata.code_languages.join(",")
-              : doc.metadata.code_languages
-                ? String(doc.metadata.code_languages)
-                : undefined,
-            entities: Array.isArray(doc.metadata.entities)
-              ? doc.metadata.entities.join(",")
-              : doc.metadata.entities
-                ? String(doc.metadata.entities)
-                : undefined,
-            summary: doc.metadata.summary || undefined,
-            quality_score:
-              typeof doc.metadata.quality_score === "number"
-                ? Number(doc.metadata.quality_score)
-                : undefined,
-          })),
+            if (doc.metadata.section_heading) metadata.section_heading = doc.metadata.section_heading;
+            if (doc.metadata.topic_tags) {
+              metadata.topic_tags = Array.isArray(doc.metadata.topic_tags)
+                ? doc.metadata.topic_tags.join(",")
+                : String(doc.metadata.topic_tags);
+            }
+            if (doc.metadata.code_languages) {
+              metadata.code_languages = Array.isArray(doc.metadata.code_languages)
+                ? doc.metadata.code_languages.join(",")
+                : String(doc.metadata.code_languages);
+            }
+            if (doc.metadata.entities) {
+              metadata.entities = Array.isArray(doc.metadata.entities)
+                ? doc.metadata.entities.join(",")
+                : String(doc.metadata.entities);
+            }
+            if (doc.metadata.summary) metadata.summary = doc.metadata.summary;
+            if (typeof doc.metadata.quality_score === "number") {
+              metadata.quality_score = doc.metadata.quality_score;
+            }
+
+            return metadata;
+          }),
         });
       }
     } catch (error) {
