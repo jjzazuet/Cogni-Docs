@@ -5,7 +5,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - chromadb-data:/chroma/chroma
+      - ./chromadb-data:/chroma/chroma
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v2/heartbeat || exit 1"]
       interval: 10s
@@ -42,7 +42,4 @@ services:
       - "5173:80"
     depends_on:
       - mcp-server
-
-volumes:
-  chromadb-data:
 
